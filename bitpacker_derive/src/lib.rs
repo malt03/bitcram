@@ -3,7 +3,7 @@ use proc_macro2::TokenStream;
 use quote::{format_ident, quote};
 use syn::{
     Data, DataEnum, DataStruct, DeriveInput, Fields, FieldsNamed, FieldsUnnamed, Type,
-    parse_macro_input,
+    parse_macro_input, parse_quote,
 };
 
 #[proc_macro_attribute]
@@ -15,9 +15,24 @@ pub fn packable(
     let ident = &input.ident;
     let buffer_type = parse_macro_input!(args as Type);
 
+    let mut generics = input.generics.clone();
+    let where_clause = generics.make_where_clause();
+    for type_param in input.generics.type_params() {
+        let ident = &type_param.ident;
+        where_clause
+            .predicates
+            .push(parse_quote! { #ident: ::bitpacker::Packable<#buffer_type> });
+    }
+    let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
+
     let (pack, unpack, size) = match &input.data {
         Data::Struct(data) => data_struct(data, &buffer_type),
-        Data::Enum(data) => data_enum(data, &buffer_type),
+        Data::Enum(data) => match data_enum(data, &buffer_type) {
+            Some(info) => info,
+            None => {
+                return quote! { #input }.into();
+            }
+        },
         Data::Union(_) => {
             return syn::Error::new_spanned(
                 input,
@@ -30,7 +45,7 @@ pub fn packable(
 
     let stream = quote! {
         #input
-        impl ::bitpacker::Packable<#buffer_type> for #ident {
+        impl #impl_generics ::bitpacker::Packable<#buffer_type> for #ident #ty_generics #where_clause {
             const SIZE: u32 = #size;
             #[inline]
             fn pack(&self) -> #buffer_type {
@@ -68,13 +83,13 @@ fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStre
 
     (
         quote! {
-            let mut packer = ::bitpacker::Packer::new();
+            let mut packer = ::bitpacker::Packer::<#buffer_type>::new();
             let Self #bracketed_idents = self;
             #pack
             packer.into_inner()
         },
         quote! {
-            let mut unpacker = ::bitpacker::Unpacker::new(buffer);
+            let mut unpacker = ::bitpacker::Unpacker::<#buffer_type>::new(buffer);
             #unpack
             Self #bracketed_idents
         },
@@ -82,12 +97,15 @@ fn data_struct(data: &DataStruct, buffer_type: &Type) -> (TokenStream, TokenStre
     )
 }
 
-fn data_enum(data: &DataEnum, buffer_type: &Type) -> (TokenStream, TokenStream, TokenStream) {
+fn data_enum(
+    data: &DataEnum,
+    buffer_type: &Type,
+) -> Option<(TokenStream, TokenStream, TokenStream)> {
     let variant_len = data.variants.len();
-    let variant_size = if variant_len == 1 {
-        0
-    } else {
-        (variant_len - 1).ilog2() + 1
+    let variant_size = match variant_len {
+        0 => return None,
+        1 => 0,
+        _ => (variant_len - 1).ilog2() + 1,
     };
     let mut pack_variants = Vec::new();
     let mut unpack_variants = Vec::new();
@@ -129,14 +147,14 @@ fn data_enum(data: &DataEnum, buffer_type: &Type) -> (TokenStream, TokenStream, 
     }
 
     let pack = quote! {
-        let mut packer = ::bitpacker::Packer::new();
+        let mut packer = ::bitpacker::Packer::<#buffer_type>::new();
         match self {
             #(#pack_variants)*
         }
         packer.into_inner()
     };
     let unpack = quote! {
-        let mut unpacker = ::bitpacker::Unpacker::new(buffer);
+        let mut unpacker = ::bitpacker::Unpacker::<#buffer_type>::new(buffer);
         let variant_index = unpacker.raw_unpack(#variant_size) as u32;
         match variant_index {
             #(#unpack_variants)*
@@ -154,7 +172,7 @@ fn data_enum(data: &DataEnum, buffer_type: &Type) -> (TokenStream, TokenStream, 
         }
     };
 
-    (pack, unpack, size)
+    Some((pack, unpack, size))
 }
 
 struct FieldsInfo {
