@@ -1,6 +1,6 @@
 use bitpacker::Packable;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct A(pub(crate) u8);
 
 impl Packable<u128> for A {

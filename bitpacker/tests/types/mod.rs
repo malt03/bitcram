@@ -1,5 +1,7 @@
 pub mod a;
 
+use std::fmt::Debug;
+
 use bitpacker::packable;
 
 #[packable(u128)]
@@ -17,12 +19,6 @@ pub enum D {
     Empty(),
     Tuple(a::A, C),
     Named { x: B, y: C },
-}
-
-#[packable(u128)]
-#[derive(Debug, PartialEq, Eq)]
-pub enum E {
-    Unit,
 }
 
 impl D {
@@ -45,3 +41,24 @@ impl D {
         }
     }
 }
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum E {
+    Unit,
+}
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct F<T: Clone>
+where
+    T: Debug,
+{
+    pub x: T,
+    pub y: T,
+}
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+#[allow(dead_code)]
+pub enum G {}
