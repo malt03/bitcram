@@ -18,7 +18,14 @@ pub fn packable(
     let (pack, unpack, size) = match &input.data {
         Data::Struct(data) => data_struct(data, &buffer_type),
         Data::Enum(data) => data_enum(data, &buffer_type),
-        Data::Union(_) => panic!("Packable cannot be derived for unions"),
+        Data::Union(_) => {
+            return syn::Error::new_spanned(
+                input,
+                "Bitpacker can only be derived for structs and enums",
+            )
+            .to_compile_error()
+            .into();
+        }
     };
 
     let stream = quote! {
@@ -35,7 +42,9 @@ pub fn packable(
             }
         }
     };
-    eprintln!("{}", stream);
+    if cfg!(debug_assertions) {
+        eprintln!("{}", stream);
+    }
     stream.into()
 }
 
