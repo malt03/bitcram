@@ -1,56 +1,76 @@
-pub mod a;
-
 use std::fmt::Debug;
 
-use bitpacker::packable;
+use bitpacker::{Packable, packable};
 
-#[packable(u128)]
-#[derive(Debug, PartialEq, Eq)]
-pub struct B;
-
-#[packable(u128)]
-#[derive(Debug, PartialEq, Eq)]
-pub struct C(a::A, a::A, B);
-
-#[packable(u128)]
-#[derive(Debug, PartialEq, Eq)]
-pub enum D {
-    Unit,
-    Empty(),
-    Tuple(a::A, C),
-    Named { x: B, y: C },
-}
-
-impl D {
-    pub fn unit() -> Self {
-        D::Unit
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct U3(pub u8);
+impl Packable<u128> for U3 {
+    const SIZE: u32 = 3;
+    fn pack(&self) -> u128 {
+        self.0 as u128
     }
-
-    pub fn empty() -> Self {
-        D::Empty()
-    }
-
-    pub fn tuple(a: u8, c0: u8, c1: u8) -> Self {
-        D::Tuple(a::A(a), C(a::A(c0), a::A(c1), B))
-    }
-
-    pub fn named(c0: u8, c1: u8) -> Self {
-        D::Named {
-            x: B,
-            y: C(a::A(c0), a::A(c1), B),
-        }
+    fn unpack(buffer: u128) -> Self {
+        Self(buffer as u8)
     }
 }
 
-#[packable(u128)]
-#[derive(Debug, PartialEq, Eq)]
-pub enum E {
-    Unit,
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct U64v(pub u64);
+impl Packable<u128> for U64v {
+    const SIZE: u32 = 64;
+    fn pack(&self) -> u128 {
+        self.0 as u128
+    }
+    fn unpack(buffer: u128) -> Self {
+        Self(buffer as u64)
+    }
+}
+
+#[derive(Debug, PartialEq, Eq, Clone)]
+pub struct Nibble(pub u8);
+impl Packable<u8> for Nibble {
+    const SIZE: u32 = 4;
+    fn pack(&self) -> u8 {
+        self.0
+    }
+    fn unpack(buffer: u8) -> Self {
+        Self(buffer)
+    }
 }
 
 #[packable(u128)]
 #[derive(Debug, PartialEq, Eq)]
-pub struct F<T: Clone>
+pub struct UnitStruct;
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct TupleStruct(pub U3, pub U3, pub UnitStruct);
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct NamedStruct {
+    pub x: U3,
+    pub y: U3,
+}
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum MixedEnum {
+    UnitVariant,
+    EmptyTuple(),
+    Tuple(U3, TupleStruct),
+    Named { x: UnitStruct, y: TupleStruct },
+}
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub enum SingleVariantEnum {
+    Only,
+}
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct GenericPair<T: Clone>
 where
     T: Debug,
 {
@@ -61,4 +81,18 @@ where
 #[packable(u128)]
 #[derive(Debug, PartialEq, Eq)]
 #[allow(dead_code)]
-pub enum G {}
+pub enum EmptyEnum {}
+
+#[packable(u8)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct FullU8 {
+    pub hi: Nibble,
+    pub lo: Nibble,
+}
+
+#[packable(u128)]
+#[derive(Debug, PartialEq, Eq)]
+pub struct FullU128 {
+    pub hi: U64v,
+    pub lo: U64v,
+}
