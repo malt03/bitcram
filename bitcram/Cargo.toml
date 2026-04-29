@@ -12,4 +12,4 @@ license.workspace = true
 repository.workspace = true
 
 [dependencies]
-bitcram_derive = { path = "../bitcram_derive", version = "=0.1.0" }
+bitcram_derive = { path = "../bitcram_derive", version = "=0.2.0" }
