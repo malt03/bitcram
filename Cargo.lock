@@ -69,14 +69,14 @@ dependencies = [
 
 [[package]]
 name = "bitcram"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bitcram_derive",
 ]
 
 [[package]]
 name = "bitcram_bench"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "bincode",
  "bitcram",
@@ -89,7 +89,7 @@ dependencies = [
 
 [[package]]
 name = "bitcram_derive"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "proc-macro2",
  "quote",
